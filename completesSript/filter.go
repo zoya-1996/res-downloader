@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+    "math/rand"
+    "time"
 )
 
 func ProcessVideoTitles(dirPath string) error {
@@ -58,16 +60,42 @@ func ProcessVideoTitles(dirPath string) error {
 				timeStampPattern := regexp.MustCompile(`_\d{14}$`)
 				baseNameWithoutTimestamp := timeStampPattern.ReplaceAllString(baseName, "")
 
-				fileCountMu.Lock()
-				count, exists := fileCount[baseNameWithoutTimestamp]
-				if exists {
-					fileCount[baseNameWithoutTimestamp] = count + 1
-					newName = baseName + ".mp4"
-				} else {
-					fileCount[baseNameWithoutTimestamp] = 1
-					newName = baseNameWithoutTimestamp + ".mp4"
+				// 4. 处理连续的句号
+				baseNameWithoutTimestamp = regexp.MustCompile(`[.。]{2,}`).ReplaceAllString(baseNameWithoutTimestamp, "")
+
+				// 5. 添加语气词和标点处理
+				if len(baseNameWithoutTimestamp) > 0 {
+					lastRune := []rune(baseNameWithoutTimestamp)[len([]rune(baseNameWithoutTimestamp))-1]
+					lastChar := string(lastRune)
+					
+					// 根据最后一个字选择合适的语气词
+					switch lastChar {
+					case "吧":
+						baseNameWithoutTimestamp += "！"
+					case "吗":
+						baseNameWithoutTimestamp += "？"
+					case "呢":
+						baseNameWithoutTimestamp += "~"
+					case "啊":
+						baseNameWithoutTimestamp += "！"
+					}
 				}
-				fileCountMu.Unlock()
+
+                rand.Seed(time.Now().UnixNano())
+                // 只保留指定的标点符号
+                punctuations := []string{"！", "~", "！！", "~~"}
+                
+                fileCountMu.Lock()
+                count, exists := fileCount[baseNameWithoutTimestamp]
+                if exists {
+                    fileCount[baseNameWithoutTimestamp] = count + 1
+                    // 重复文件名时添加随机标点
+                    newName = baseNameWithoutTimestamp + punctuations[rand.Intn(len(punctuations))] + ".mp4"
+                } else {
+                    fileCount[baseNameWithoutTimestamp] = 1
+                    newName = baseNameWithoutTimestamp + ".mp4"
+                }
+                fileCountMu.Unlock()
 
 				if newName != fileName {
 					oldPath := filepath.Join(dirPath, fileName)

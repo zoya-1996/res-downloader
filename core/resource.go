@@ -116,8 +116,8 @@ func (r *Resource) download(mediaInfo MediaInfo, decodeStr string) {
 			description := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(mediaInfo.Description, "")
 			// 2. 移除 HTML 实体字符
 			description = regexp.MustCompile(`&[^;]+;`).ReplaceAllString(description, "")
-			// 3. 移除话题标签及其内容
-			description = regexp.MustCompile(`#[^#]*#|#[^#]*$`).ReplaceAllString(description, "")
+			// 3. 移除开头的话题标签（#开头到空格结束）和中间的话题标签
+			description = regexp.MustCompile(`^#[^ ]*\s+|#\s*[^#]*\s*#|#\s*[^#]*$`).ReplaceAllString(description, "")
 			// 4. 处理特殊字符和空格相关的问号
 			description = regexp.MustCompile(`([^\p{Han}\p{Latin}])[?？]|[?？]([^\p{Han}\p{Latin}])|(%20|\s)[?？]|[?？](%20|\s)`).ReplaceAllString(description, "$1$2")
 			// 5. 移除文件系统不支持的字符
