@@ -112,12 +112,23 @@ func (r *Resource) download(mediaInfo MediaInfo, decodeStr string) {
 		rawUrl := mediaInfo.Url
 		fileName := Md5(rawUrl)
 		if mediaInfo.Description != "" {
-			fileName = regexp.MustCompile(`[^\w\p{Han}]`).ReplaceAllString(mediaInfo.Description, "")
+			// 1. 先移除 HTML 标签
+			description := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(mediaInfo.Description, "")
+			// 2. 移除 HTML 实体字符
+			description = regexp.MustCompile(`&[^;]+;`).ReplaceAllString(description, "")
+			// 3. 移除话题标签及其内容
+			description = regexp.MustCompile(`[?﻿#][^#]*[#﻿]`).ReplaceAllString(description, "")
+			// 4. 移除文件系统不支持的字符
+			fileName = regexp.MustCompile(`[<>:"/\\|*]`).ReplaceAllString(description, "")
+			// 5. 移除多余的空格和末尾标点
+			fileName = strings.TrimSpace(fileName)
+			fileName = strings.TrimRight(fileName, "?！!。，,")
+			
 			fileLen := globalConfig.FilenameLen
 			if fileLen <= 0 {
 				fileLen = 10
 			}
-
+			
 			runes := []rune(fileName)
 			if len(runes) > fileLen {
 				fileName = string(runes[:fileLen])
