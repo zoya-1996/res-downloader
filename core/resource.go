@@ -117,12 +117,28 @@ func (r *Resource) download(mediaInfo MediaInfo, decodeStr string) {
 			// 2. 移除 HTML 实体字符
 			description = regexp.MustCompile(`&[^;]+;`).ReplaceAllString(description, "")
 			// 3. 移除话题标签及其内容
-			description = regexp.MustCompile(`[?﻿#][^#]*[#﻿]`).ReplaceAllString(description, "")
-			// 4. 移除文件系统不支持的字符
+			description = regexp.MustCompile(`#[^#]*#|#[^#]*$`).ReplaceAllString(description, "")
+			// 4. 处理特殊字符和空格相关的问号
+			description = regexp.MustCompile(`([^\p{Han}\p{Latin}])[?？]|[?？]([^\p{Han}\p{Latin}])|(%20|\s)[?？]|[?？](%20|\s)`).ReplaceAllString(description, "$1$2")
+			// 5. 移除文件系统不支持的字符
 			fileName = regexp.MustCompile(`[<>:"/\\|*]`).ReplaceAllString(description, "")
-			// 5. 移除多余的空格和末尾标点
+			// 6. 移除所有空格和转义空格
+			fileName = strings.ReplaceAll(fileName, "%20", "")
+			fileName = regexp.MustCompile(`\s+`).ReplaceAllString(fileName, "")
+			// 7. 移除末尾标点
+			fileName = strings.TrimRight(fileName, "！!。，,?？")
+			// 5. 移除多余的空格
 			fileName = strings.TrimSpace(fileName)
-			fileName = strings.TrimRight(fileName, "?！!。，,")
+			// 6. 处理问号：如果包含疑问词则保留问号
+			if strings.ContainsAny(fileName, "吗么呢") {
+				if strings.HasSuffix(fileName, "?") || strings.HasSuffix(fileName, "？") {
+					fileName = strings.TrimRight(fileName, "?？") + "?"
+				}
+			} else {
+				fileName = strings.TrimRight(fileName, "?？")
+			}
+			// 7. 移除其他末尾标点
+			fileName = strings.TrimRight(fileName, "！!。，,")
 			
 			fileLen := globalConfig.FilenameLen
 			if fileLen <= 0 {
