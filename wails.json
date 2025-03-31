@@ -16,5 +16,10 @@
     "productVersion": "3.0.3",
     "copyright": "Copyright © 2023",
     "comments": "This is a high-value, high-performance, and diverse resource downloader called res-downloader."
+  },
+  "build": {
+    "exclude": [
+      "completesSript"
+    ]
   }
 }
