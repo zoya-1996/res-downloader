@@ -35,7 +35,7 @@ func initConfig() *Config {
   "Theme": "lightTheme",
   "Quality": 0,
   "SaveDirectory": "",
-  "FilenameLen": 0,
+  "FilenameLen": 200,
   "FilenameTime": true,
   "UpstreamProxy": "",
   "OpenProxy": false,
