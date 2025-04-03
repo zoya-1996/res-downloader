@@ -1,4 +1,5 @@
 package main
+//  go run filter.go -dir "/Users/zoya/Desktop/高德地图旺铺商户助手"
 import (
 	"flag"
 	"fmt"
@@ -64,36 +65,65 @@ func ProcessVideoTitles(dirPath string) error {
 				baseNameWithoutTimestamp = regexp.MustCompile(`[.。]{2,}`).ReplaceAllString(baseNameWithoutTimestamp, "")
 
 				// 5. 添加语气词和标点处理
-				if len(baseNameWithoutTimestamp) > 0 {
-					lastRune := []rune(baseNameWithoutTimestamp)[len([]rune(baseNameWithoutTimestamp))-1]
-					lastChar := string(lastRune)
-					
-					// 根据最后一个字选择合适的语气词
-					switch lastChar {
-					case "吧":
-						baseNameWithoutTimestamp += "！"
-					case "吗":
-						baseNameWithoutTimestamp += "？"
-					case "呢":
-						baseNameWithoutTimestamp += "~"
-					case "啊":
-						baseNameWithoutTimestamp += "！"
-					}
-				}
+				// 检查是否已经有标点符号
+                hasEndingPunctuation := strings.HasSuffix(baseNameWithoutTimestamp, "！") ||
+                    strings.HasSuffix(baseNameWithoutTimestamp, "？") ||
+                    strings.HasSuffix(baseNameWithoutTimestamp, "~") ||
+                    strings.HasSuffix(baseNameWithoutTimestamp, "。")
+
+                if !hasEndingPunctuation && len(baseNameWithoutTimestamp) > 0 {
+                    lastRune := []rune(baseNameWithoutTimestamp)[len([]rune(baseNameWithoutTimestamp))-1]
+                    lastChar := string(lastRune)
+                    
+                    switch lastChar {
+                    case "吧":
+                        baseNameWithoutTimestamp += "！"
+                    case "吗":
+                        baseNameWithoutTimestamp += "？"
+                    case "呢":
+                        baseNameWithoutTimestamp += "~"
+                    case "啊":
+                        baseNameWithoutTimestamp += "！"
+                    }
+                }
 
                 rand.Seed(time.Now().UnixNano())
                 // 只保留指定的标点符号
                 punctuations := []string{"！", "~", "！！", "~~"}
                 
+                // 检查是否包含@符号
+                if strings.Contains(fileName, "@") {
+                    // 创建暂不发送文件夹
+                    holdDir := filepath.Join(dirPath, "暂不发送")
+                    if err := os.MkdirAll(holdDir, 0755); err != nil {
+                        results <- err
+                        continue
+                    }
+                    
+                    // 移动文件到暂不发送文件夹
+                    oldPath := filepath.Join(dirPath, fileName)
+                    newPath := filepath.Join(holdDir, fileName)
+                    if err := os.Rename(oldPath, newPath); err != nil {
+                        fmt.Printf("移动文件失败 %s: %v\n", fileName, err)
+                        results <- err
+                    } else {
+                        fmt.Printf("已移动到暂不发送: %s\n", fileName)
+                        results <- nil
+                    }
+                    continue
+                }
+
+                // 处理其他文件的代码
                 fileCountMu.Lock()
                 count, exists := fileCount[baseNameWithoutTimestamp]
                 if exists {
                     fileCount[baseNameWithoutTimestamp] = count + 1
-                    // 重复文件名时添加随机标点
-                    newName = baseNameWithoutTimestamp + punctuations[rand.Intn(len(punctuations))] + ".mp4"
+                    // 重复文件名时添加随机标点和固定后缀
+                    newName = baseNameWithoutTimestamp + punctuations[rand.Intn(len(punctuations))] + "【🎉入驻高德地图享三重大礼🎁，数量有限先到先得⏳，私信我领取】" + ".mp4"
                 } else {
                     fileCount[baseNameWithoutTimestamp] = 1
-                    newName = baseNameWithoutTimestamp + ".mp4"
+                    // 非重复文件名添加固定后缀
+                    newName = baseNameWithoutTimestamp + "【🎉入驻高德地图享三重大礼🎁，数量有限先到先得⏳，私信我领取】" + ".mp4"
                 }
                 fileCountMu.Unlock()
 
